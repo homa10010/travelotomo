@@ -302,7 +302,7 @@ function newTrip({ name, departure, returnDate }) {
     id: `trip-${Date.now()}`,
     name: name || "新しい旅行",
     days: calcDays(departure, returnDate) || 2,
-    clothesSets: 3,
+    clothesSets: 0,
     departure: departure || "",
     returnDate: returnDate || "",
     checked: {},
