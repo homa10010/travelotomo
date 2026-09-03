@@ -9,12 +9,12 @@ import {
 // Firebase コンソール →「プロジェクトの設定」→「マイアプリ」で表示される値に置き換える。
 // この値は公開されて問題ない（アクセス制御は firestore.rules が担う）。
 const firebaseConfig = {
-  apiKey: "PASTE_YOUR_API_KEY",
-  authDomain: "PASTE_YOUR_PROJECT.firebaseapp.com",
-  projectId: "PASTE_YOUR_PROJECT",
-  storageBucket: "PASTE_YOUR_PROJECT.appspot.com",
-  messagingSenderId: "PASTE_YOUR_SENDER_ID",
-  appId: "PASTE_YOUR_APP_ID",
+  apiKey: "AIzaSyDA14dOrMZlxvWI4QpBbEy-ncT8w2X3eKY",
+  authDomain: "travel-ff404.firebaseapp.com",
+  projectId: "travel-ff404",
+  storageBucket: "travel-ff404.firebasestorage.app",
+  messagingSenderId: "822408507139",
+  appId: "1:822408507139:web:8e072eb7673879628a8336"
 };
 
 const app = initializeApp(firebaseConfig);
