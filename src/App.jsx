@@ -88,6 +88,7 @@ const THEMES = [
     vars: {
       "--header-bg": "#2F6F62",
       "--header-fg": "#F4F5F0",
+      "--header-btn": "rgba(255,255,255,0.18)",
       "--bg": "#F4F5F0",
       "--paper": "#FFFFFF",
       "--ink": "#1F2A24",
@@ -119,6 +120,7 @@ const THEMES = [
     vars: {
       "--header-bg": "#27707F",
       "--header-fg": "#F1F5F6",
+      "--header-btn": "rgba(255,255,255,0.18)",
       "--bg": "#F1F5F6",
       "--paper": "#FFFFFF",
       "--ink": "#16303F",
@@ -150,6 +152,7 @@ const THEMES = [
     vars: {
       "--header-bg": "#B25634",
       "--header-fg": "#FDF6F2",
+      "--header-btn": "rgba(255,255,255,0.20)",
       "--bg": "#FAF3EE",
       "--paper": "#FFFFFF",
       "--ink": "#3A2620",
@@ -181,6 +184,7 @@ const THEMES = [
     vars: {
       "--header-bg": "#B44970",
       "--header-fg": "#FDF3F7",
+      "--header-btn": "rgba(255,255,255,0.20)",
       "--bg": "#FCF2F5",
       "--paper": "#FFFFFF",
       "--ink": "#3B2530",
@@ -212,6 +216,7 @@ const THEMES = [
     vars: {
       "--header-bg": "#4FA88F",
       "--header-fg": "#12201B",
+      "--header-btn": "rgba(0,0,0,0.13)",
       "--bg": "#161C21",
       "--paper": "#1F272D",
       "--ink": "#E6EAEC",
@@ -261,6 +266,7 @@ const C = {
   violet: "var(--violet)",
   header: "var(--header-bg)",
   headerFg: "var(--header-fg)",
+  headerBtn: "var(--header-btn)",
 };
 
 const card = {
@@ -1752,13 +1758,17 @@ export default function TravelApp() {
   const shell = {
     fontFamily: "'Zen Kaku Gothic New', sans-serif",
     background: C.bg,
-    minHeight: "100vh",
+    minHeight: "100dvh",
     color: C.ink,
     maxWidth: 480,
     margin: "0 auto",
     position: "relative",
     display: "flex",
     flexDirection: "column",
+    // ホーム画面から起動したときに時計やノッチと重ならないようにする
+    paddingTop: "env(safe-area-inset-top, 0px)",
+    paddingLeft: "env(safe-area-inset-left, 0px)",
+    paddingRight: "env(safe-area-inset-right, 0px)",
   };
 
   const fontStyle = (
@@ -1857,8 +1867,8 @@ export default function TravelApp() {
               border: `1px solid ${C.line}`,
               background: C.paper,
               borderRadius: 4,
-              width: 34,
-              height: 34,
+              width: 42,
+              height: 42,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -1866,7 +1876,7 @@ export default function TravelApp() {
               color: C.ink,
             }}
           >
-            <ChevronLeft size={18} />
+            <ChevronLeft size={20} strokeWidth={2} />
           </button>
           <span style={{ fontSize: 18, fontWeight: 900 }}>設定</span>
         </div>
@@ -1950,15 +1960,19 @@ export default function TravelApp() {
             aria-label="設定"
             style={{
               border: "none",
-              background: "transparent",
+              background: C.headerBtn,
               color: C.headerFg,
               cursor: "pointer",
-              padding: 4,
-              opacity: 0.85,
+              width: 42,
+              height: 42,
+              borderRadius: 21,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
               flexShrink: 0,
             }}
           >
-            <Settings size={20} strokeWidth={1.8} />
+            <Settings size={20} strokeWidth={2} />
           </button>
         </div>
 
@@ -2067,32 +2081,37 @@ export default function TravelApp() {
                 aria-label="ホームに戻る"
                 style={{
                   border: "none",
-                  background: "transparent",
+                  background: C.headerBtn,
                   color: C.headerFg,
                   cursor: "pointer",
-                  padding: 4,
+                  height: 42,
+                  padding: "0 16px",
+                  borderRadius: 21,
                   display: "flex",
                   alignItems: "center",
-                  gap: 6,
-                  opacity: 0.85,
+                  gap: 7,
                 }}
               >
-                <Home size={18} strokeWidth={1.8} />
-                <span style={{ fontSize: 12, letterSpacing: 1 }}>ホーム</span>
+                <Home size={19} strokeWidth={2} />
+                <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: 0.5 }}>ホーム</span>
               </button>
               <button
                 onClick={() => setView("settings")}
                 aria-label="設定"
                 style={{
                   border: "none",
-                  background: "transparent",
+                  background: C.headerBtn,
                   color: C.headerFg,
                   cursor: "pointer",
-                  padding: 4,
-                  opacity: 0.85,
+                  width: 42,
+                  height: 42,
+                  borderRadius: 21,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
               >
-                <Settings size={18} strokeWidth={1.8} />
+                <Settings size={20} strokeWidth={2} />
               </button>
             </div>
             <div style={{ fontSize: 24, fontWeight: 900, lineHeight: 1.3 }}>{trip.name}</div>
@@ -2131,6 +2150,8 @@ export default function TravelApp() {
           background: C.paper,
           borderTop: `1px solid ${C.line}`,
           display: "flex",
+          // iPhone のホームバーと重ならないようにする
+          paddingBottom: "env(safe-area-inset-bottom, 0px)",
         }}
       >
         {TABS.map((t) => {
