@@ -26,6 +26,7 @@ import {
   ChevronLeft,
   Home,
   Settings,
+  Pencil,
 } from "lucide-react";
 
 // ===================== 定数 =====================
@@ -652,6 +653,7 @@ function PackingTab({ trip, patchTrip, items, setItems, forgotten, setForgotten 
     patchTrip({ checked: { ...checked, [id]: !checked[id] } });
   }
 
+
   return (
     <div>
       <div style={{ display: "flex", gap: 10 }}>
@@ -1011,9 +1013,68 @@ function PackingTab({ trip, patchTrip, items, setItems, forgotten, setForgotten 
 
 // ===================== 予定タブ =====================
 
+// 編集ボタン
+function EditButton({ onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label="編集"
+      style={{
+        border: "none",
+        background: "transparent",
+        color: C.sub,
+        cursor: "pointer",
+        padding: 6,
+        flexShrink: 0,
+      }}
+    >
+      <Pencil size={15} />
+    </button>
+  );
+}
+
+// フォーム下部の「やめる」＋「追加/更新」ボタン
+function FormActions({ onCancel, onSubmit, editing }) {
+  return (
+    <div style={{ display: "flex", gap: 8 }}>
+      <button
+        onClick={onCancel}
+        style={{
+          flex: 1,
+          background: "transparent",
+          border: `1px solid ${C.line}`,
+          borderRadius: 4,
+          padding: "10px 0",
+          fontSize: 14,
+          cursor: "pointer",
+          color: C.sub,
+        }}
+      >
+        やめる
+      </button>
+      <div style={{ flex: 2 }}>
+        <PrimaryButton onClick={onSubmit}>
+          {editing ? (
+            <>
+              <Check size={16} /> 更新
+            </>
+          ) : (
+            <>
+              <Plus size={16} /> 追加
+            </>
+          )}
+        </PrimaryButton>
+      </div>
+    </div>
+  );
+}
+
+const EMPTY_SCHEDULE = { day: 1, time: "", title: "", memo: "" };
+
 function ScheduleTab({ trip, patchTrip }) {
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ day: 1, time: "", title: "", memo: "" });
+  const [editingId, setEditingId] = useState(null);
+  const [form, setForm] = useState(EMPTY_SCHEDULE);
   const days = tripDays(trip);
 
   const byDay = useMemo(() => {
@@ -1036,20 +1097,39 @@ function ScheduleTab({ trip, patchTrip }) {
     return `${d.getMonth() + 1}/${d.getDate()}(${"日月火水木金土"[d.getDay()]})`;
   }
 
-  function add() {
-    if (!form.title.trim()) return;
-    patchTrip({
-      schedule: [...(trip.schedule || []), { ...form, id: `s-${Date.now()}`, title: form.title.trim() }],
-    });
-    setForm({ day: form.day, time: "", title: "", memo: "" });
+  function closeForm() {
     setOpen(false);
+    setEditingId(null);
+    setForm(EMPTY_SCHEDULE);
+  }
+
+  function submit() {
+    if (!form.title.trim()) return;
+    const list = trip.schedule || [];
+    const entry = { ...form, title: form.title.trim() };
+    if (editingId) {
+      patchTrip({
+        schedule: list.map((s) => (s.id === editingId ? { ...entry, id: editingId } : s)),
+      });
+    } else {
+      patchTrip({ schedule: [...list, { ...entry, id: `s-${Date.now()}` }] });
+    }
+    closeForm();
+  }
+
+  function openEdit(s) {
+    setForm({ day: s.day, time: s.time || "", title: s.title, memo: s.memo || "" });
+    setEditingId(s.id);
+    setOpen(true);
   }
 
   function remove(id) {
     patchTrip({ schedule: (trip.schedule || []).filter((s) => s.id !== id) });
+    if (id === editingId) closeForm();
   }
 
   const totalCount = (trip.schedule || []).length;
+
 
   return (
     <div>
@@ -1069,14 +1149,7 @@ function ScheduleTab({ trip, patchTrip }) {
           if (list.length === 0) return null;
           return (
             <div key={day}>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "baseline",
-                  gap: 8,
-                  marginBottom: 6,
-                }}
-              >
+              <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 6 }}>
                 <span style={{ fontSize: 15, fontWeight: 900 }}>{day}日目</span>
                 {dateLabel(day) && (
                   <span style={{ fontSize: 12, color: C.sub }}>{dateLabel(day)}</span>
@@ -1090,15 +1163,16 @@ function ScheduleTab({ trip, patchTrip }) {
                       ...card,
                       display: "flex",
                       gap: 12,
-                      padding: "12px 14px",
+                      padding: "12px 8px 12px 14px",
                       alignItems: "flex-start",
+                      outline: s.id === editingId ? `2px solid ${C.green}` : "none",
                     }}
                   >
                     <div
                       style={{
                         fontSize: 14,
                         fontWeight: 900,
-                        color: s.time ? C.green : "var(--muted)",
+                        color: s.time ? C.green : C.muted,
                         width: 46,
                         flexShrink: 0,
                         paddingTop: 1,
@@ -1106,7 +1180,7 @@ function ScheduleTab({ trip, patchTrip }) {
                     >
                       {s.time || "--:--"}
                     </div>
-                    <div style={{ flex: 1 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 15, fontWeight: 500 }}>{s.title}</div>
                       {s.memo && (
                         <div style={{ fontSize: 12, color: C.sub, marginTop: 3, lineHeight: 1.6 }}>
@@ -1114,6 +1188,7 @@ function ScheduleTab({ trip, patchTrip }) {
                         </div>
                       )}
                     </div>
+                    <EditButton onClick={() => openEdit(s)} />
                     <DeleteButton onClick={() => remove(s.id)} />
                   </div>
                 ))}
@@ -1133,7 +1208,9 @@ function ScheduleTab({ trip, patchTrip }) {
             padding: 14,
           }}
         >
-          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>予定を追加</div>
+          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>
+            {editingId ? "予定を編集" : "予定を追加"}
+          </div>
           <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
             <select
               value={form.day}
@@ -1165,28 +1242,7 @@ function ScheduleTab({ trip, patchTrip }) {
             placeholder="メモ（任意）"
             style={{ ...inputStyle, marginBottom: 10 }}
           />
-          <div style={{ display: "flex", gap: 8 }}>
-            <button
-              onClick={() => setOpen(false)}
-              style={{
-                flex: 1,
-                background: "transparent",
-                border: `1px solid ${C.line}`,
-                borderRadius: 4,
-                padding: "10px 0",
-                fontSize: 14,
-                cursor: "pointer",
-                color: C.sub,
-              }}
-            >
-              やめる
-            </button>
-            <div style={{ flex: 2 }}>
-              <PrimaryButton onClick={add}>
-                <Plus size={16} /> 追加
-              </PrimaryButton>
-            </div>
-          </div>
+          <FormActions onCancel={closeForm} onSubmit={submit} editing={!!editingId} />
         </div>
       ) : (
         <div style={{ marginTop: 16 }}>
@@ -1201,30 +1257,57 @@ function ScheduleTab({ trip, patchTrip }) {
 
 // ===================== 予約タブ =====================
 
+const EMPTY_RESERVATION = {
+  category: "transport",
+  title: "",
+  when: "",
+  number: "",
+  memo: "",
+};
+
 function ReservationTab({ trip, patchTrip }) {
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({
-    category: "transport",
-    title: "",
-    when: "",
-    number: "",
-    memo: "",
-  });
+  const [editingId, setEditingId] = useState(null);
+  const [form, setForm] = useState(EMPTY_RESERVATION);
 
   const list = trip.reservations || [];
 
-  function add() {
-    if (!form.title.trim()) return;
-    patchTrip({
-      reservations: [...list, { ...form, id: `r-${Date.now()}`, title: form.title.trim() }],
-    });
-    setForm({ category: form.category, title: "", when: "", number: "", memo: "" });
+  function closeForm() {
     setOpen(false);
+    setEditingId(null);
+    setForm({ ...EMPTY_RESERVATION, category: form.category });
+  }
+
+  function submit() {
+    if (!form.title.trim()) return;
+    const entry = { ...form, title: form.title.trim() };
+    if (editingId) {
+      patchTrip({
+        reservations: list.map((r) => (r.id === editingId ? { ...entry, id: editingId } : r)),
+      });
+    } else {
+      patchTrip({ reservations: [...list, { ...entry, id: `r-${Date.now()}` }] });
+    }
+    closeForm();
+  }
+
+  function openEdit(r) {
+    setForm({
+      category: r.category,
+      title: r.title,
+      when: r.when || "",
+      number: r.number || "",
+      memo: r.memo || "",
+    });
+    setEditingId(r.id);
+    setOpen(true);
   }
 
   function remove(id) {
     patchTrip({ reservations: list.filter((r) => r.id !== id) });
+    if (id === editingId) closeForm();
   }
+
 
   return (
     <div>
@@ -1266,14 +1349,15 @@ function ReservationTab({ trip, patchTrip }) {
                     key={r.id}
                     style={{
                       ...card,
-                      padding: "12px 14px",
+                      padding: "12px 8px 12px 14px",
                       borderLeft: `3px solid ${cat.color}`,
                       display: "flex",
-                      gap: 10,
+                      gap: 8,
                       alignItems: "flex-start",
+                      outline: r.id === editingId ? `2px solid ${C.green}` : "none",
                     }}
                   >
-                    <div style={{ flex: 1 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 15, fontWeight: 700 }}>{r.title}</div>
                       {r.when && (
                         <div style={{ fontSize: 12, color: C.sub, marginTop: 3 }}>{r.when}</div>
@@ -1301,6 +1385,7 @@ function ReservationTab({ trip, patchTrip }) {
                         </div>
                       )}
                     </div>
+                    <EditButton onClick={() => openEdit(r)} />
                     <DeleteButton onClick={() => remove(r.id)} />
                   </div>
                 ))}
@@ -1320,7 +1405,9 @@ function ReservationTab({ trip, patchTrip }) {
             padding: 14,
           }}
         >
-          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>予約を追加</div>
+          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>
+            {editingId ? "予約を編集" : "予約を追加"}
+          </div>
           <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
             {RESERVATION_CATEGORIES.map((cat) => {
               const active = form.category === cat.id;
@@ -1332,7 +1419,7 @@ function ReservationTab({ trip, patchTrip }) {
                     flex: 1,
                     border: `1px solid ${active ? cat.color : C.line}`,
                     background: active ? cat.color : "transparent",
-                    color: active ? C.bg : C.sub,
+                    color: active ? C.paper : C.sub,
                     borderRadius: 4,
                     padding: "8px 0",
                     fontSize: 13,
@@ -1369,28 +1456,7 @@ function ReservationTab({ trip, patchTrip }) {
             placeholder="メモ（住所・電話番号など）"
             style={{ ...inputStyle, marginBottom: 10 }}
           />
-          <div style={{ display: "flex", gap: 8 }}>
-            <button
-              onClick={() => setOpen(false)}
-              style={{
-                flex: 1,
-                background: "transparent",
-                border: `1px solid ${C.line}`,
-                borderRadius: 4,
-                padding: "10px 0",
-                fontSize: 14,
-                cursor: "pointer",
-                color: C.sub,
-              }}
-            >
-              やめる
-            </button>
-            <div style={{ flex: 2 }}>
-              <PrimaryButton onClick={add}>
-                <Plus size={16} /> 追加
-              </PrimaryButton>
-            </div>
-          </div>
+          <FormActions onCancel={closeForm} onSubmit={submit} editing={!!editingId} />
         </div>
       ) : (
         <div style={{ marginTop: 16 }}>
@@ -1405,10 +1471,13 @@ function ReservationTab({ trip, patchTrip }) {
 
 // ===================== 場所タブ =====================
 
+const EMPTY_PLACE = { name: "", region: "", category: "food", memo: "" };
+
 function PlacesTab({ trip, patchTrip }) {
   const [groupBy, setGroupBy] = useState("region");
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", region: "", category: "food", memo: "" });
+  const [editingId, setEditingId] = useState(null);
+  const [form, setForm] = useState(EMPTY_PLACE);
 
   const list = trip.places || [];
   const visited = list.filter((p) => p.visited).length;
@@ -1426,16 +1495,38 @@ function PlacesTab({ trip, patchTrip }) {
     return Array.from(map.entries());
   }, [list, groupBy]);
 
-  function add() {
-    if (!form.name.trim()) return;
-    patchTrip({
-      places: [
-        ...list,
-        { ...form, id: `p-${Date.now()}`, name: form.name.trim(), visited: false },
-      ],
-    });
-    setForm({ name: "", region: form.region, category: form.category, memo: "" });
+  function closeForm() {
     setOpen(false);
+    setEditingId(null);
+    setForm({ ...EMPTY_PLACE, region: form.region, category: form.category });
+  }
+
+  function submit() {
+    if (!form.name.trim()) return;
+    const entry = { ...form, name: form.name.trim() };
+    if (editingId) {
+      patchTrip({
+        places: list.map((p) =>
+          p.id === editingId ? { ...p, ...entry, id: editingId } : p
+        ),
+      });
+    } else {
+      patchTrip({
+        places: [...list, { ...entry, id: `p-${Date.now()}`, visited: false }],
+      });
+    }
+    closeForm();
+  }
+
+  function openEdit(p) {
+    setForm({
+      name: p.name,
+      region: p.region || "",
+      category: p.category,
+      memo: p.memo || "",
+    });
+    setEditingId(p.id);
+    setOpen(true);
   }
 
   function toggleVisited(id) {
@@ -1446,7 +1537,9 @@ function PlacesTab({ trip, patchTrip }) {
 
   function remove(id) {
     patchTrip({ places: list.filter((p) => p.id !== id) });
+    if (id === editingId) closeForm();
   }
+
 
   return (
     <div>
@@ -1502,66 +1595,75 @@ function PlacesTab({ trip, patchTrip }) {
                 return (
                   <div
                     key={p.id}
-                    onClick={() => toggleVisited(p.id)}
                     style={{
                       ...card,
                       display: "flex",
-                      gap: 12,
-                      padding: "12px 14px",
+                      gap: 8,
+                      padding: "12px 8px 12px 14px",
                       alignItems: "flex-start",
-                      cursor: "pointer",
+                      outline: p.id === editingId ? `2px solid ${C.green}` : "none",
                     }}
                   >
-                    <CheckBox on={!!p.visited} />
-                    <div style={{ flex: 1 }}>
-                      <div
-                        style={{
-                          fontSize: 15,
-                          fontWeight: 500,
-                          textDecoration: p.visited ? "line-through" : "none",
-                          color: p.visited ? C.done : C.ink,
-                        }}
-                      >
-                        {p.name}
-                      </div>
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: 6,
-                          marginTop: 5,
-                          alignItems: "center",
-                          flexWrap: "wrap",
-                        }}
-                      >
-                        {cat && (
-                          <span
-                            style={{
-                              fontSize: 11,
-                              color: cat.color,
-                              border: `1px solid ${cat.color}`,
-                              borderRadius: 10,
-                              padding: "1px 8px",
-                            }}
-                          >
-                            {cat.label}
-                          </span>
-                        )}
-                        {groupBy === "category" && p.region && (
-                          <span style={{ fontSize: 11, color: C.sub }}>{p.region}</span>
-                        )}
-                      </div>
-                      {p.memo && (
-                        <div style={{ fontSize: 12, color: C.sub, marginTop: 6, lineHeight: 1.6 }}>
-                          {p.memo}
-                        </div>
-                      )}
-                    </div>
-                    <DeleteButton
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        remove(p.id);
+                    <div
+                      onClick={() => toggleVisited(p.id)}
+                      style={{
+                        display: "flex",
+                        gap: 12,
+                        flex: 1,
+                        minWidth: 0,
+                        cursor: "pointer",
+                        alignItems: "flex-start",
                       }}
-                    />
+                    >
+                      <CheckBox on={!!p.visited} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div
+                          style={{
+                            fontSize: 15,
+                            fontWeight: 500,
+                            textDecoration: p.visited ? "line-through" : "none",
+                            color: p.visited ? C.done : C.ink,
+                          }}
+                        >
+                          {p.name}
+                        </div>
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: 6,
+                            marginTop: 5,
+                            alignItems: "center",
+                            flexWrap: "wrap",
+                          }}
+                        >
+                          {cat && (
+                            <span
+                              style={{
+                                fontSize: 11,
+                                color: cat.color,
+                                border: `1px solid ${cat.color}`,
+                                borderRadius: 10,
+                                padding: "1px 8px",
+                              }}
+                            >
+                              {cat.label}
+                            </span>
+                          )}
+                          {groupBy === "category" && p.region && (
+                            <span style={{ fontSize: 11, color: C.sub }}>{p.region}</span>
+                          )}
+                        </div>
+                        {p.memo && (
+                          <div
+                            style={{ fontSize: 12, color: C.sub, marginTop: 6, lineHeight: 1.6 }}
+                          >
+                            {p.memo}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <EditButton onClick={() => openEdit(p)} />
+                    <DeleteButton onClick={() => remove(p.id)} />
                   </div>
                 );
               })}
@@ -1580,7 +1682,9 @@ function PlacesTab({ trip, patchTrip }) {
             padding: 14,
           }}
         >
-          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>場所を追加</div>
+          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>
+            {editingId ? "場所を編集" : "場所を追加"}
+          </div>
           <input
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -1603,7 +1707,7 @@ function PlacesTab({ trip, patchTrip }) {
                   style={{
                     border: `1px solid ${active ? cat.color : C.line}`,
                     background: active ? cat.color : "transparent",
-                    color: active ? C.bg : C.sub,
+                    color: active ? C.paper : C.sub,
                     borderRadius: 16,
                     padding: "5px 12px",
                     fontSize: 12,
@@ -1622,28 +1726,7 @@ function PlacesTab({ trip, patchTrip }) {
             placeholder="メモ（営業時間・食べたいものなど）"
             style={{ ...inputStyle, marginBottom: 10 }}
           />
-          <div style={{ display: "flex", gap: 8 }}>
-            <button
-              onClick={() => setOpen(false)}
-              style={{
-                flex: 1,
-                background: "transparent",
-                border: `1px solid ${C.line}`,
-                borderRadius: 4,
-                padding: "10px 0",
-                fontSize: 14,
-                cursor: "pointer",
-                color: C.sub,
-              }}
-            >
-              やめる
-            </button>
-            <div style={{ flex: 2 }}>
-              <PrimaryButton onClick={add}>
-                <Plus size={16} /> 追加
-              </PrimaryButton>
-            </div>
-          </div>
+          <FormActions onCancel={closeForm} onSubmit={submit} editing={!!editingId} />
         </div>
       ) : (
         <div style={{ marginTop: 16 }}>
